@@ -1,6 +1,6 @@
 {
   "name": "@xtsusaku/steamapi-wrapper",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "Bun-first compatible Steam Web API client library dynamically mapped like steamapi.xpaw.me",
   "keywords": [
     "steam",

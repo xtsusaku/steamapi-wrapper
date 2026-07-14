@@ -115,11 +115,14 @@ export class SteamAPI {
       }
     }
 
-    // 5. Select correct API host and API Key based on endpoint level
+    // 5. Select correct API host and API Key based on endpoint level and provided credentials
     let activeBaseUrl = this.baseUrl;
     let activeKey = this.apiKey;
 
-    if (isPublisherOnly) {
+    // If only partnerKey is provided, route all APIs to the partner domain by default
+    const onlyPartnerKeyProvided = !this.apiKey && this.partnerKey;
+
+    if (isPublisherOnly || onlyPartnerKeyProvided) {
       if (activeBaseUrl === "https://api.steampowered.com") {
         activeBaseUrl = "https://partner.steam-api.com";
       }

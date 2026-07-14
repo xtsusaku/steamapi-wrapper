@@ -1,16 +1,7 @@
 {
-  "name": "steamapi-xpaw",
+  "name": "@xtsusaku/steamapi-wrapper",
   "version": "1.0.0",
   "description": "Bun-first compatible Steam Web API client library dynamically mapped like steamapi.xpaw.me",
-  "type": "module",
-  "main": "index.js",
-  "types": "index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./index.d.ts",
-      "import": "./index.js"
-    }
-  },
   "keywords": [
     "steam",
     "steamapi",
@@ -19,5 +10,26 @@
     "api",
     "xpaw"
   ],
-  "license": "MIT"
+  "homepage": "https://github.com/xtsusaku/steamapi-wrapper#readme",
+  "bugs": {
+    "url": "https://github.com/xtsusaku/steamapi-wrapper/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xtsusaku/steamapi-wrapper.git"
+  },
+  "license": "AGPL-3.0-or-later",
+  "author": "xTsuSaKu",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js"
+    }
+  },
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
 }

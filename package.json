@@ -1,0 +1,23 @@
+{
+  "name": "steamapi-xpaw",
+  "version": "1.0.0",
+  "description": "Bun-first compatible Steam Web API client library dynamically mapped like steamapi.xpaw.me",
+  "type": "module",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js"
+    }
+  },
+  "keywords": [
+    "steam",
+    "steamapi",
+    "bun",
+    "node",
+    "api",
+    "xpaw"
+  ],
+  "license": "MIT"
+}

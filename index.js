@@ -2,9 +2,21 @@ import { METHOD_VERSIONS, PUBLISHER_ONLY } from "./metadata.js";
 
 // Known verbs that imply an HTTP POST method in the Steam Web API
 const POST_VERBS = [
-  "set", "add", "remove", "delete", "post", "create",
-  "update", "validate", "approve", "lock", "unlock",
-  "record", "fire", "submit", "report"
+  "set",
+  "add",
+  "remove",
+  "delete",
+  "post",
+  "create",
+  "update",
+  "validate",
+  "approve",
+  "lock",
+  "unlock",
+  "record",
+  "fire",
+  "submit",
+  "report",
 ];
 
 /**
@@ -14,7 +26,7 @@ const POST_VERBS = [
 export class SteamAPI {
   /**
    * Create a new SteamAPI instance
-   * 
+   *
    * @param {Object} options - Configuration options
    * @param {string} [options.apiKey] - Your Steam Web API Key
    * @param {string} [options.key] - Alternate name for apiKey
@@ -32,6 +44,7 @@ export class SteamAPI {
     this.baseUrl = options.baseUrl || "https://api.steampowered.com";
     this.format = options.format || "json";
     this.headers = options.headers || {};
+    this.SteamStoreAPI = new SteamStoreAPI(this);
 
     // Return a Proxy that wraps the instance to allow dynamic interface matching
     return new Proxy(this, {
@@ -42,13 +55,17 @@ export class SteamAPI {
         }
 
         // Otherwise, return a nested Proxy representing the Steam Interface (e.g. IPlayerService)
-        return new Proxy({}, {
-          get(_, methodName) {
-            // Return an async function for the Steam Web API method call
-            return (params) => target.callApi(interfaceName, methodName, params);
-          }
-        });
-      }
+        return new Proxy(
+          {},
+          {
+            get(_, methodName) {
+              // Return an async function for the Steam Web API method call
+              return (params) =>
+                target.callApi(interfaceName, methodName, params);
+            },
+          },
+        );
+      },
     });
   }
 
@@ -62,7 +79,7 @@ export class SteamAPI {
     // Enforce partnerKey for publisher-only APIs
     if (isPublisherOnly && !this.partnerKey) {
       throw new Error(
-        `Method "${interfaceName}.${methodName}" is a publisher-only API and requires a "partnerKey" to be provided in the SteamAPI constructor options.`
+        `Method "${interfaceName}.${methodName}" is a publisher-only API and requires a "partnerKey" to be provided in the SteamAPI constructor options.`,
       );
     }
 
@@ -75,7 +92,9 @@ export class SteamAPI {
       delete userParams._httpMethod;
     } else {
       const lowerMethod = methodName.toLowerCase();
-      const isKnownPost = POST_VERBS.some(verb => lowerMethod.startsWith(verb));
+      const isKnownPost = POST_VERBS.some((verb) =>
+        lowerMethod.startsWith(verb),
+      );
       if (isKnownPost) {
         httpMethod = "POST";
       }
@@ -137,7 +156,7 @@ export class SteamAPI {
     let fetchUrl = `${activeBaseUrl}/${interfaceName}/${methodName}/v${version}/`;
     let fetchOptions = {
       method: httpMethod,
-      headers: { ...this.headers }
+      headers: { ...this.headers },
     };
 
     if (httpMethod === "POST") {
@@ -155,7 +174,8 @@ export class SteamAPI {
       }
 
       fetchUrl += `?${urlParams.toString()}`;
-      fetchOptions.headers["Content-Type"] = "application/x-www-form-urlencoded";
+      fetchOptions.headers["Content-Type"] =
+        "application/x-www-form-urlencoded";
       fetchOptions.body = bodyData;
     } else {
       // GET Request
@@ -198,33 +218,33 @@ export class SteamAPI {
       return await response.text();
     }
   }
+}
+
+/**
+ * Steam Storefront / Big Picture Store API
+ */
+export class SteamStoreAPI {
+  constructor(client) {
+    this.client = client;
+  }
 
   /**
-   * Get details for a Steam application using the Steam Store API
-   * 
-   * @param {number|string} appid - The Steam Application ID
-   * @param {string} [code] - Optional 2-letter country/language code
-   * @param {string} [language] - Optional full language name (e.g. 'japanese', 'thai')
-   * @returns {Promise<any>} The API response from Steam
+   * Internal helper to make Storefront API requests
    */
-  async getAppDetails(appid, code, language) {
-    if (!appid) {
-      throw new Error("appid is required for getAppDetails");
+  async _fetchStore(endpoint, params = {}) {
+    const urlParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null) {
+        urlParams.set(key, value);
+      }
     }
-    let fetchUrl = `https://store.steampowered.com/api/appdetails?appids=${encodeURIComponent(appid)}`;
-    if (code) {
-      fetchUrl += `&cc=${encodeURIComponent(code)}`;
-    }
-    if (language) {
-      fetchUrl += `&l=${encodeURIComponent(language)}`;
-    }
+    const queryString = urlParams.toString();
+    const fetchUrl = `https://store.steampowered.com/api/${endpoint}/${queryString ? "?" + queryString : ""}`;
 
-    const fetchOptions = {
+    const response = await fetch(fetchUrl, {
       method: "GET",
-      headers: { ...this.headers }
-    };
-
-    const response = await fetch(fetchUrl, fetchOptions);
+      headers: { ...this.client.headers },
+    });
 
     if (!response.ok) {
       const errorMsg = `Steam Store API returned status ${response.status}`;
@@ -242,8 +262,34 @@ export class SteamAPI {
   }
 
   /**
+   * Get details for one or more Steam applications using the Steam Store API
+   *
+   * @param {number[]|string[]|number|string} appids - Array of Steam Application IDs or a single ID
+   * @param {string} [code] - Optional 2-letter country/language code
+   * @param {string} [language] - Optional full language name (e.g. 'japanese', 'thai')
+   * @param {string[]|string} [filters] - Optional filter or array of filters to apply
+   * @returns {Promise<any>} The API response from Steam
+   */
+  async getAppDetails(appids, code, language, filters) {
+    if (!appids || (Array.isArray(appids) && appids.length === 0)) {
+      throw new Error("appids is required for getAppDetails");
+    }
+    const isMultiple = Array.isArray(appids) || (typeof appids === "string" && appids.includes(","));
+    const appidsParam = Array.isArray(appids) ? appids.join(",") : appids;
+    const params = { appids: appidsParam };
+    if (code) params.cc = code;
+    if (language) params.l = language;
+    if (isMultiple) {
+      params.filters = "price_overview";
+    } else if (filters) {
+      params.filters = Array.isArray(filters) ? filters.join(",") : filters;
+    }
+    return this._fetchStore("appdetails", params);
+  }
+
+  /**
    * Get pricing details for one or more Steam applications
-   * 
+   *
    * @param {number[]|string[]|number|string} appids - Array of Steam Application IDs or a single ID
    * @param {string} [code] - Optional 2-letter country/language code
    * @returns {Promise<any>} The API response from Steam
@@ -253,30 +299,114 @@ export class SteamAPI {
       throw new Error("appids is required for getAppPricingDetails");
     }
     const appidsParam = Array.isArray(appids) ? appids.join(",") : appids;
-    let fetchUrl = `https://store.steampowered.com/api/appdetails?appids=${encodeURIComponent(appidsParam)}&filters=price_overview`;
-    if (code) {
-      fetchUrl += `&cc=${encodeURIComponent(code)}`;
+    const params = { appids: appidsParam, filters: "price_overview" };
+    if (code) params.cc = code;
+    return this._fetchStore("appdetails", params);
+  }
+
+  /**
+   * Get apps featured on the storefront
+   *
+   * @param {string} [code] - Optional 2-letter country/language code
+   * @param {string} [language] - Optional full language name
+   * @returns {Promise<any>} The API response from Steam
+   */
+  async getFeatured(code, language) {
+    const params = {};
+    if (code) params.cc = code;
+    if (language) params.l = language;
+    return this._fetchStore("featured", params);
+  }
+
+  /**
+   * Get featured categories on the storefront
+   *
+   * @param {string} [code] - Optional 2-letter country/language code
+   * @param {string} [language] - Optional full language name
+   * @param {Object} [options] - Additional optional parameters (e.g., trailer, extra)
+   * @returns {Promise<any>} The API response from Steam
+   */
+  async getFeaturedCategories(code, language, options = {}) {
+    const params = { ...options };
+    if (code) params.cc = code;
+    if (language) params.l = language;
+    return this._fetchStore("featuredcategories", params);
+  }
+
+  /**
+   * Get information about apps and users in the context of the logged-in user session
+   *
+   * @param {number[]|string[]|number|string} appids - Array of Steam Application IDs or a single ID
+   * @param {string} [code] - Optional 2-letter country/language code
+   * @param {string} [language] - Optional full language name
+   * @returns {Promise<any>} The API response from Steam
+   */
+  async getAppUserDetails(appids, code, language) {
+    if (!appids || (Array.isArray(appids) && appids.length === 0)) {
+      throw new Error("appids is required for getAppUserDetails");
     }
+    const appidsParam = Array.isArray(appids) ? appids.join(",") : appids;
+    const params = { appids: appidsParam };
+    if (code) params.cc = code;
+    if (language) params.l = language;
+    return this._fetchStore("appuserdetails", params);
+  }
 
-    const fetchOptions = {
-      method: "GET",
-      headers: { ...this.headers }
-    };
-
-    const response = await fetch(fetchUrl, fetchOptions);
-
-    if (!response.ok) {
-      const errorMsg = `Steam Store API returned status ${response.status}`;
-      const err = new Error(errorMsg);
-      err.status = response.status;
-      throw err;
+  /**
+   * Get Big Picture mode store messages
+   *
+   * @param {string[]|string} gids - ID or array of IDs of the messages
+   * @param {string} [code] - Optional 2-letter country/language code
+   * @param {string} [language] - Optional full language name
+   * @returns {Promise<any>} The API response from Steam
+   */
+  async getMessages(gids, code, language) {
+    if (!gids || (Array.isArray(gids) && gids.length === 0)) {
+      throw new Error("gids is required for getMessages");
     }
+    const gidsParam = Array.isArray(gids) ? gids.join(",") : gids;
+    const params = { gids: gidsParam };
+    if (code) params.cc = code;
+    if (language) params.l = language;
+    return this._fetchStore("messages", params);
+  }
 
-    const contentType = response.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) {
-      return await response.json();
-    } else {
-      return await response.text();
+  /**
+   * Get details for storefront packages
+   *
+   * @param {number[]|string[]|number|string} packageids - Array of package IDs or a single ID
+   * @param {string} [code] - Optional 2-letter country/language code
+   * @param {string} [language] - Optional full language name
+   * @returns {Promise<any>} The API response from Steam
+   */
+  async getPackageDetails(packageids, code, language) {
+    if (!packageids || (Array.isArray(packageids) && packageids.length === 0)) {
+      throw new Error("packageids is required for getPackageDetails");
     }
+    const packageidsParam = Array.isArray(packageids)
+      ? packageids.join(",")
+      : packageids;
+    const params = { packageids: packageidsParam };
+    if (code) params.cc = code;
+    if (language) params.l = language;
+    return this._fetchStore("packagedetails", params);
+  }
+
+  /**
+   * Get details of a sale page
+   *
+   * @param {string|number} id - ID of the sale
+   * @param {string} [code] - Optional 2-letter country/language code
+   * @param {string} [language] - Optional full language name
+   * @returns {Promise<any>} The API response from Steam
+   */
+  async getSalePage(id, code, language) {
+    if (!id) {
+      throw new Error("id is required for getSalePage");
+    }
+    const params = { id };
+    if (code) params.cc = code;
+    if (language) params.l = language;
+    return this._fetchStore("salepage", params);
   }
 }

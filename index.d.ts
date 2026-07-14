@@ -21862,6 +21862,84 @@ export interface IWorkshopService {
 }
 
 /**
+ * Steam Storefront / Big Picture Store API
+ */
+export class SteamStoreAPI {
+  constructor(client: SteamAPI);
+
+  /**
+   * Get details for one or more Steam applications using the Steam Store API.
+   * 
+   * @param appids Array of Steam Application IDs or a single ID
+   * @param code Optional 2-letter country/language code
+   * @param language Optional full language name (e.g. 'japanese', 'thai')
+   * @param filters Optional filter or array of filters to apply
+   */
+  getAppDetails(appids: (number | string)[] | number | string, code?: string, language?: string, filters?: string[] | string): Promise<SteamAppDetailsResponse | SteamAppPricingResponse>;
+
+  /**
+   * Get pricing details for one or more Steam applications.
+   * 
+   * @param appids Array of Steam Application IDs or a single ID
+   * @param code Optional 2-letter country/language code
+   */
+  getAppPricingDetails(appids: (number | string)[] | number | string, code?: string): Promise<SteamAppPricingResponse>;
+
+  /**
+   * Get apps featured on the storefront.
+   * 
+   * @param code Optional 2-letter country/language code
+   * @param language Optional full language name
+   */
+  getFeatured(code?: string, language?: string): Promise<any>;
+
+  /**
+   * Get featured categories on the storefront.
+   * 
+   * @param code Optional 2-letter country/language code
+   * @param language Optional full language name
+   * @param options Additional optional parameters
+   */
+  getFeaturedCategories(code?: string, language?: string, options?: { trailer?: boolean | number | string; extra?: string }): Promise<any>;
+
+  /**
+   * Get information about apps and users in the context of the logged-in user session.
+   * 
+   * @param appids Array of Steam Application IDs or a single ID
+   * @param code Optional 2-letter country/language code
+   * @param language Optional full language name
+   */
+  getAppUserDetails(appids: (number | string)[] | number | string, code?: string, language?: string): Promise<any>;
+
+  /**
+   * Get Big Picture mode store messages.
+   * 
+   * @param gids ID or array of IDs of the messages
+   * @param code Optional 2-letter country/language code
+   * @param language Optional full language name
+   */
+  getMessages(gids: string[] | string, code?: string, language?: string): Promise<any>;
+
+  /**
+   * Get details for storefront packages.
+   * 
+   * @param packageids Array of package IDs or a single ID
+   * @param code Optional 2-letter country/language code
+   * @param language Optional full language name
+   */
+  getPackageDetails(packageids: (number | string)[] | number | string, code?: string, language?: string): Promise<any>;
+
+  /**
+   * Get details of a sale page.
+   * 
+   * @param id ID of the sale
+   * @param code Optional 2-letter country/language code
+   * @param language Optional full language name
+   */
+  getSalePage(id: string | number, code?: string, language?: string): Promise<any>;
+}
+
+/**
  * SteamAPI client dynamically mapped using JavaScript Proxies.
  * Supports calling all 200+ interfaces and thousands of endpoints documented on steamapi.xpaw.me
  */
@@ -21874,23 +21952,8 @@ export class SteamAPI {
   baseUrl: string;
   format: string;
   headers: Record<string, string>;
-
-  /**
-   * Get details for a Steam application using the Steam Store API.
-   * 
-   * @param appid The Steam Application ID
-   * @param code Optional 2-letter country/language code
-   * @param language Optional full language name (e.g. 'japanese', 'thai')
-   */
-  getAppDetails(appid: number | string, code?: string, language?: string): Promise<SteamAppDetailsResponse>;
-
-  /**
-   * Get pricing details for one or more Steam applications.
-   * 
-   * @param appids Array of Steam Application IDs or a single ID
-   * @param code Optional 2-letter country/language code
-   */
-  getAppPricingDetails(appids: (number | string)[] | number | string, code?: string): Promise<SteamAppPricingResponse>;
+  /** Access the Steam Storefront / Big Picture Store API */
+  SteamStoreAPI: SteamStoreAPI;
 
   /** Interface endpoints for IAccountCartService */
   IAccountCartService: IAccountCartService;

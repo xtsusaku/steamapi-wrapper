@@ -198,4 +198,85 @@ export class SteamAPI {
       return await response.text();
     }
   }
+
+  /**
+   * Get details for a Steam application using the Steam Store API
+   * 
+   * @param {number|string} appid - The Steam Application ID
+   * @param {string} [code] - Optional 2-letter country/language code
+   * @param {string} [language] - Optional full language name (e.g. 'japanese', 'thai')
+   * @returns {Promise<any>} The API response from Steam
+   */
+  async getAppDetails(appid, code, language) {
+    if (!appid) {
+      throw new Error("appid is required for getAppDetails");
+    }
+    let fetchUrl = `https://store.steampowered.com/api/appdetails?appids=${encodeURIComponent(appid)}`;
+    if (code) {
+      fetchUrl += `&cc=${encodeURIComponent(code)}`;
+    }
+    if (language) {
+      fetchUrl += `&l=${encodeURIComponent(language)}`;
+    }
+
+    const fetchOptions = {
+      method: "GET",
+      headers: { ...this.headers }
+    };
+
+    const response = await fetch(fetchUrl, fetchOptions);
+
+    if (!response.ok) {
+      const errorMsg = `Steam Store API returned status ${response.status}`;
+      const err = new Error(errorMsg);
+      err.status = response.status;
+      throw err;
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      return await response.json();
+    } else {
+      return await response.text();
+    }
+  }
+
+  /**
+   * Get pricing details for one or more Steam applications
+   * 
+   * @param {number[]|string[]|number|string} appids - Array of Steam Application IDs or a single ID
+   * @param {string} [code] - Optional 2-letter country/language code
+   * @returns {Promise<any>} The API response from Steam
+   */
+  async getAppPricingDetails(appids, code) {
+    if (!appids || (Array.isArray(appids) && appids.length === 0)) {
+      throw new Error("appids is required for getAppPricingDetails");
+    }
+    const appidsParam = Array.isArray(appids) ? appids.join(",") : appids;
+    let fetchUrl = `https://store.steampowered.com/api/appdetails?appids=${encodeURIComponent(appidsParam)}&filters=price_overview`;
+    if (code) {
+      fetchUrl += `&cc=${encodeURIComponent(code)}`;
+    }
+
+    const fetchOptions = {
+      method: "GET",
+      headers: { ...this.headers }
+    };
+
+    const response = await fetch(fetchUrl, fetchOptions);
+
+    if (!response.ok) {
+      const errorMsg = `Steam Store API returned status ${response.status}`;
+      const err = new Error(errorMsg);
+      err.status = response.status;
+      throw err;
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      return await response.json();
+    } else {
+      return await response.text();
+    }
+  }
 }
